@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>O Elemento Mais Lindo da Praia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{serif:['"Playfair Display"','serif'],sans:['"Poppins"','sans-serif']}}}}</script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#scene{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+/* Área de clique FIXA e invisível: nunca se transforma, então o hover não oscila */
+.hotspot{cursor:pointer;outline:none}
+.hit{fill:transparent;pointer-events:all}
+/* O visual é o único que se move; não recebe eventos de mouse */
+.visual{pointer-events:none;transform-box:fill-box;transform-origin:50% 85%;will-change:transform}
+.hotspot:focus-visible .hit{stroke:#fff;stroke-width:3;stroke-dasharray:7 5;fill:rgba(255,255,255,.14)}
+.glow-sun{filter:drop-shadow(0 0 45px rgba(255,179,71,.95)) drop-shadow(0 0 90px rgba(255,126,95,.6))}
+.a-pulse,.a-sparkle{transform-box:fill-box;transform-origin:center}
+.a-pulse{animation:pulse 3s ease-in-out infinite}
+.a-sparkle{animation:sparkle 2.5s ease-in-out infinite}
+.a-sway{transform-origin:0 0;animation:sway 4s ease-in-out infinite}
+.a-bob{animation:bob 5s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.05);opacity:.5}}
+@keyframes sparkle{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2.5deg)}}
+@keyframes bob{50%{transform:translateY(-8px)}}
+.glass-card{background:rgba(255,255,255,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.6)}
+.glass-modal{background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,230,210,.8)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body class="bg-gradient-to-b from-[#ff8b7b] via-[#ffaa88] to-[#fce4c8] min-h-screen font-sans text-slate-800 flex flex-col items-center select-none overflow-x-hidden antialiased">
+
+<header class="w-full max-w-4xl px-4 pt-6 pb-3 text-center">
+  <h1 class="font-serif text-2xl sm:text-4xl md:text-5xl font-bold text-rose-950 leading-tight">Encontre o elemento mais lindo existente na praia 🏖️✨</h1>
+  <p class="mt-2 text-sm sm:text-base text-rose-900/80 max-w-xl mx-auto font-light">Olhe com atenção para o mar, o céu dourado e a areia morna. Toque no que você acredita ser a maior obra-prima deste paraíso!</p>
+  <div class="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs md:text-sm">
+    <button id="audioBtn" aria-pressed="false" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 hover:bg-white text-rose-800 transition shadow-sm border border-rose-100"><span id="audioIcon">🔈</span><span id="audioText">Ouvir as Ondas</span></button>
+    <div class="px-3.5 py-1.5 rounded-full bg-white/70 text-rose-800 shadow-sm border border-rose-100">Tentativas: <b id="tryCounter" class="text-rose-600 text-base">0</b></div>
+    <button id="hintBtn" class="flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-amber-100/80 hover:bg-amber-100 text-amber-900 transition shadow-sm border border-amber-200">💡 Uma Dica</button>
+  </div>
+</header>
+
+<main class="w-full max-w-4xl px-3 sm:px-4 py-2 flex flex-col items-center flex-grow">
+<div id="scene" class="relative w-full aspect-[1000/650] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/60">
+<svg class="block w-full h-full" viewBox="0 0 1000 650" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5e62"/><stop offset=".35" stop-color="#ff9966"/><stop offset=".65" stop-color="#ffcaa4"/><stop offset="1" stop-color="#fee2c5"/></linearGradient>
+  <radialGradient id="sunGrad"><stop offset="0" stop-color="#fff5cc"/><stop offset=".25" stop-color="#ffd064"/><stop offset=".6" stop-color="#ff9033" stop-opacity=".9"/><stop offset="1" stop-color="#ff7b54" stop-opacity="0"/></radialGradient>
+  <linearGradient id="seaGrad1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffaa70" stop-opacity=".9"/><stop offset=".2" stop-color="#2a7886"/><stop offset=".7" stop-color="#0e4b5b"/><stop offset="1" stop-color="#08333e"/></linearGradient>
+  <linearGradient id="seaShallowGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#51b9b0"/><stop offset=".6" stop-color="#8ce1c9"/><stop offset="1" stop-color="#c9f1e1"/></linearGradient>
+  <linearGradient id="sandGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9cf9b"/><stop offset=".4" stop-color="#f7e1b5"/><stop offset="1" stop-color="#ebd1a0"/></linearGradient>
+  <linearGradient id="palmGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b4d3e"/><stop offset=".5" stop-color="#2d7f5e"/><stop offset="1" stop-color="#144234"/></linearGradient>
+  <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" result="b"/><feComposite in="SourceGraphic" in2="b" operator="over"/></filter>
+  <filter id="blur8" x="-50%" y="-100%" width="200%" height="300%"><feGaussianBlur stdDeviation="8"/></filter>
+  <filter id="blur6" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
+</defs>
+
+<rect width="1000" height="650" fill="url(#skyGrad)"/>
+<g opacity=".4" class="a-bob" style="animation-duration:8s" filter="url(#blur8)" fill="#fff">
+  <ellipse cx="200" cy="110" rx="90" ry="22"/><ellipse cx="260" cy="100" rx="60" ry="18"/><ellipse cx="780" cy="90" rx="110" ry="25"/><ellipse cx="830" cy="80" rx="70" ry="20"/>
+</g>
+
+<!-- Pôr do sol -->
+<g id="hotspot-sunset" class="hotspot" tabindex="0" role="button" aria-label="Pôr do Sol">
+  <g class="visual" style="transform-origin:50% 50%">
+    <circle cx="500" cy="245" r="95" fill="url(#sunGrad)" opacity=".6" class="a-pulse"/>
+    <circle cx="500" cy="245" r="58" fill="#fff9df" class="glow-sun"/>
+  </g>
+  <ellipse class="hit" cx="500" cy="228" rx="100" ry="70"/>
+</g>
+
+<!-- Gaivotas: cada uma tem seu próprio visual e sua própria área de clique -->
+<g id="hotspot-seagulls" class="hotspot" tabindex="0" role="button" aria-label="Gaivotas voando">
+  <g class="visual"><g class="a-bob" style="animation-duration:4s"><path d="M320,135Q332,120 345,135Q358,120 370,135Q358,128 345,133Q332,128 320,135Z" fill="#fff" opacity=".95"/></g></g>
+  <g class="visual"><g class="a-bob" style="animation-duration:5s;animation-delay:-2s"><path d="M375,110Q384,98 395,110Q406,98 415,110Q406,104 395,108Q384,104 375,110Z" fill="#fff" opacity=".9"/></g></g>
+  <g class="visual"><g class="a-bob" style="animation-duration:6s;animation-delay:-3s"><path d="M680,140Q690,128 702,140Q714,128 724,140Q714,133 702,138Q690,133 680,140Z" fill="#fff" opacity=".85"/></g></g>
+  <rect class="hit" x="306" y="104" width="72" height="44"/><rect class="hit" x="380" y="84" width="50" height="40"/><rect class="hit" x="666" y="112" width="72" height="44"/>
+</g>
+
+<path d="M0,285H1000V420H0Z" fill="url(#seaGrad1)"/>
+<g fill="#ffb469" opacity=".8"><polygon points="460,285 540,285 570,410 430,410" opacity=".3" filter="url(#blur6)"/>
+<ellipse cx="500" cy="305" rx="75" ry="5" fill="#ffe99e"/><ellipse cx="500" cy="315" rx="55" ry="4" fill="#ffd573"/><ellipse cx="500" cy="326" rx="40" ry="3.5" fill="#ffa742"/></g>
+
+<!-- Golfinho -->
+<g id="hotspot-dolphin" class="hotspot" transform="translate(610 260)" tabindex="0" role="button" aria-label="Golfinho no mar">
+  <g class="visual">
+    <circle cx="35" cy="52" r="3" fill="#fff" opacity=".8"/><circle cx="15" cy="50" r="2.5" fill="#fff" opacity=".8"/><ellipse cx="25" cy="54" rx="16" ry="3.5" fill="#fff" opacity=".9"/>
+    <path d="M0,48C15,22 45,15 70,30C58,26 42,28 34,36C28,42 22,46 16,50Z" fill="#244b61"/>
+    <path d="M70,30C76,33 77,37 72,38C66,39 60,35 55,33Z" fill="#244b61"/>
+    <path d="M40,22L46,12L48,22Z" fill="#1b394b"/><path d="M0,48L-7,44L-4,52Z" fill="#1b394b"/>
+  </g>
+  <ellipse class="hit" cx="35" cy="35" rx="50" ry="30"/>
+</g>
+
+<!-- Ondas -->
+<g id="hotspot-waves" class="hotspot" tabindex="0" role="button" aria-label="Ondas cristalinas">
+  <g class="visual">
+    <path d="M0,340C220,335 340,355 520,340C700,328 850,352 1000,340L1000,460L0,460Z" fill="#1a7c8c" opacity=".75"/>
+    <path d="M0,380C180,365 390,395 620,375C800,360 920,388 1000,378L1000,490L0,490Z" fill="url(#seaShallowGrad)" opacity=".9"/>
+    <path d="M0,405C160,395 310,418 510,405C720,392 880,416 1000,405L1000,413C880,424 720,400 510,413C310,426 160,403 0,413Z" fill="#fff" opacity=".8"/>
+  </g>
+  <rect class="hit" x="0" y="335" width="1000" height="88"/>
+</g>
+
+<path d="M0,425C240,410 460,455 750,430C890,418 960,432 1000,438L1000,650L0,650Z" fill="url(#sandGrad)"/>
+<path d="M0,427C240,412 460,457 750,432C890,420 960,434 1000,440" stroke="#f0cf98" stroke-width="7" fill="none" opacity=".6"/>
+
+<!-- Coqueiros: a posição (translate) fica no grupo externo; o balanço, no interno -->
+<g id="hotspot-palms" class="hotspot" transform="translate(15 120)" tabindex="0" role="button" aria-label="Coqueiros tropicais">
+  <g class="visual" style="transform-origin:30% 100%">
+    <path d="M60,390C80,280 110,180 155,100C147,100 120,185 90,290C75,340 70,390 60,390Z" fill="#6d4c41"/>
+    <path d="M15,395C35,310 50,220 85,140C78,140 55,220 38,305C25,350 20,395 15,395Z" fill="#523932"/>
+    <g transform="translate(150 100)"><g class="a-sway">
+      <circle cx="-5" cy="5" r="7" fill="#422e1b"/><circle cx="6" cy="4" r="6.5" fill="#4a341f"/><circle cx="2" cy="12" r="6" fill="#3a2717"/>
+      <path d="M0,0C40,-40 100,-30 140,-5C95,-10 45,5 0,0Z" fill="url(#palmGrad)"/><path d="M0,0C50,-15 120,10 150,50C105,30 55,15 0,0Z" fill="#1b4d3e"/>
+      <path d="M0,0C20,30 70,75 110,95C80,65 40,35 0,0Z" fill="#28694a"/><path d="M0,0C-30,-40 -90,-35 -130,-10C-85,-15 -40,0 0,0Z" fill="url(#palmGrad)"/>
+      <path d="M0,0C-20,20 -60,60 -95,75C-70,45 -35,25 0,0Z" fill="#194c3c"/><path d="M0,0C-10,-55 20,-90 50,-105C35,-65 15,-30 0,0Z" fill="#2d7f5e"/>
+    </g></g>
+    <g transform="translate(85 140)"><g class="a-sway" style="animation-delay:-1.8s">
+      <path d="M0,0C35,-30 80,-20 110,5C75,-5 35,5 0,0Z" fill="#1c5543"/><path d="M0,0C-25,-30 -70,-25 -100,-5C-65,-8 -30,2 0,0Z" fill="#226650"/><path d="M0,0C20,20 50,55 80,70C55,45 30,25 0,0Z" fill="#174436"/>
+    </g></g>
+  </g>
+  <ellipse class="hit" cx="150" cy="95" rx="135" ry="90"/><polygon class="hit" points="15,395 70,395 160,100 80,138"/>
+</g>
+
+<!-- Concha com pérola -->
+<g id="hotspot-pearl" class="hotspot" transform="translate(420 520)" tabindex="0" role="button" aria-label="Concha com Pérola">
+  <g class="visual">
+    <ellipse cx="35" cy="42" rx="36" ry="10" fill="#c7a76f" opacity=".6"/>
+    <path d="M5,35C10,50 60,50 65,35C65,30 5,30 5,35Z" fill="#f8d6be" stroke="#d99f82" stroke-width="1.5"/>
+    <path d="M5,34C0,5 70,5 65,34C55,20 15,20 5,34Z" fill="#ffe2d1" stroke="#d99f82" stroke-width="1.5"/>
+    <path d="M35,10V32M20,13L26,33M50,13L44,33" stroke="#eaae93" stroke-width="1.2" stroke-dasharray="2 2"/>
+    <circle cx="35" cy="30" r="14" fill="#fff" opacity=".5" filter="url(#softGlow)"/><circle cx="35" cy="30" r="9" fill="#fff" stroke="#fce4ec" stroke-width="1.5"/><circle cx="32" cy="27" r="3" fill="#fff"/>
+    <path d="M46,18L48,22L52,24L48,26L46,30L44,26L40,24L44,22Z" fill="#fff" opacity=".9" class="a-sparkle"/>
+  </g>
+  <ellipse class="hit" cx="35" cy="30" rx="44" ry="30"/>
+</g>
+
+<!-- Estrela do mar -->
+<g id="hotspot-starfish" class="hotspot" transform="translate(260 535)" tabindex="0" role="button" aria-label="Estrela do Mar">
+  <g class="visual" style="transform-origin:50% 50%">
+    <ellipse cx="30" cy="32" rx="28" ry="8" fill="#c7a76f" opacity=".5"/>
+    <path d="M30,5C33,18 36,22 47,24C38,30 36,36 39,49C31,42 27,41 20,48C23,36 21,30 12,24C23,22 26,18 30,5Z" fill="#ff7761" stroke="#e0533c" stroke-width="2" stroke-linejoin="round"/>
+    <g fill="#ffe0b2"><circle cx="30" cy="26" r="2.5"/><circle cx="23" cy="24" r="1.5"/><circle cx="37" cy="24" r="1.5"/><circle cx="26" cy="36" r="1.5"/><circle cx="34" cy="37" r="1.5"/></g>
+  </g>
+  <ellipse class="hit" cx="30" cy="27" rx="32" ry="28"/>
+</g>
+
+<!-- Garrafa -->
+<g id="hotspot-bottle" class="hotspot" transform="translate(740 510)" tabindex="0" role="button" aria-label="Mensagem na garrafa">
+  <g class="visual" style="transform-origin:50% 60%">
+    <ellipse cx="35" cy="35" rx="30" ry="7" fill="#bfa167" opacity=".5"/>
+    <g transform="rotate(-25 30 25)">
+      <rect x="18" y="10" width="36" height="18" rx="6" fill="#a7f3d0" fill-opacity=".45" stroke="#34d399" stroke-width="1.5"/>
+      <rect x="8" y="14" width="11" height="10" rx="1.5" fill="#a7f3d0" fill-opacity=".45" stroke="#34d399" stroke-width="1.5"/>
+      <rect x="3" y="15.5" width="6" height="7" rx="1" fill="#b45309"/>
+      <rect x="23" y="13" width="22" height="11" rx="2" fill="#fef3c7" stroke="#d97706" stroke-width=".8"/>
+      <path d="M32,13V24" stroke="#ef4444" stroke-width="1.5"/><path d="M20,13H50" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".8"/>
+    </g>
+  </g>
+  <ellipse class="hit" cx="30" cy="24" rx="38" ry="24"/>
+</g>
+
+<g opacity=".85" pointer-events="none">
+  <ellipse cx="610" cy="570" rx="10" ry="6" fill="#ffd1b3" stroke="#e09d77"/><ellipse cx="612" cy="569" rx="5" ry="3" fill="#fff"/>
+  <ellipse cx="180" cy="595" rx="8" ry="5" fill="#fff1c5" stroke="#d6b876"/><ellipse cx="880" cy="580" rx="12" ry="7" fill="#ffd8c7" stroke="#e8a88c"/>
+</g>
+</svg>
+
+<div class="absolute top-4 right-4 pointer-events-none"><span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/30 backdrop-blur-md text-white text-xs font-medium"><span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>Toque nos elementos da cena</span></div>
+<div id="toast" aria-live="polite" class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[92%] sm:w-auto sm:max-w-md px-5 py-3 rounded-2xl glass-card text-rose-950 font-medium text-xs sm:text-sm text-center shadow-xl opacity-0 translate-y-4 transition-all duration-300 pointer-events-none flex items-center justify-center gap-2">
+  <span id="toastIcon" class="text-xl">🌸</span><span id="toastMsg"></span>
+</div>
+</div>
+
+<div class="w-full mt-5 flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
+  <p class="text-xs sm:text-sm text-rose-950/80 text-center sm:text-left"><b class="text-rose-900">Dúvida?</b> Conchinhas, o mar, os coqueiros... Será que você encontrou?</p>
+  <button id="giveUpBtn" class="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 text-white font-semibold shadow-lg hover:shadow-rose-400/50 hover:scale-[1.03] active:scale-[.98] transition-all duration-300">Desistir 🥺</button>
+</div>
+</main>
+
+<div id="modal" role="dialog" aria-modal="true" aria-hidden="true" class="fixed inset-0 z-50 bg-rose-950/60 backdrop-blur-md flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-500">
+  <div id="modalBox" class="relative w-full max-w-lg glass-modal rounded-3xl p-6 sm:p-9 text-center scale-90 transition-transform duration-500 shadow-2xl">
+    <div class="mx-auto w-20 h-20 mb-4 rounded-full bg-white shadow-inner flex items-center justify-center border-2 border-rose-200"><span class="text-4xl animate-bounce">💖</span></div>
+    <span class="text-xs tracking-widest text-rose-500 font-bold">O Mistério Foi Revelado</span>
+    <h2 class="mt-2 font-serif text-2xl sm:text-3xl font-bold text-rose-950 leading-snug">O elemento mais lindo da praia não está presente aqui porque ele é você! ❤️</h2>
+    <p class="mt-4 text-xs sm:text-sm text-slate-700 leading-relaxed font-light">Nenhum pôr do sol dourado, nenhuma pérola rara das profundezas do oceano e nenhuma brisa tropical chega perto do encanto do seu sorriso e do brilho de seus olhos. Você ilumina tudo por onde passa.</p>
+    <div class="mt-5 p-3.5 rounded-2xl bg-rose-50/80 border border-rose-100 text-xs text-rose-900/90 italic">A academia é um lugar triste e vazio sem você 😭</div>
+    <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+      <button id="againBtn" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-sm font-medium shadow-md">🔄 Voltar para a Praia</button>
+    </div>
+    <button id="closeBtn" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-rose-100/60 hover:bg-rose-100 text-rose-800 font-semibold" aria-label="Fechar">✕</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Conteúdo ---------- */
+const DATA = {
+  sunset:   { icon:'🌅', msgs:['O pôr do sol é deslumbrante... mas há um brilho muito maior no litoral!'] },
+  pearl:    { icon:'🦪', msgs:['Uma joia rara nascida no fundo dos mares... mas não é o tesouro mais precioso do litoral!'] },
+  dolphin:  { icon:'🐬', msgs:['Gracioso, alegre e livre... mas a resposta certa traz uma alegria ainda maior!'] },
+  starfish: { icon:'⭐', msgs:['Quase... mas a verdadeira estrela deste cenário não está deitada na areia!'] },
+  waves:    { icon:'🌊', msgs:['O azul cristalino é fascinante, mas ainda não é o elemento mais lindo do litoral!'] },
+  seagulls: { icon:'🕊️', msgs:['A brisa da praia é admirável, mas tem algo ainda mais!'] },
+  palms:    { icon:'🌴', msgs:['Elegantes e cheios de sombra fresca, mas existe algo melhor no litoral'] },
+  bottle:   { icon:'📜', msgs:['Uma carta guardada pelas correntes marinhas diz: "Você está muito perto da resposta..."'] }
+};
+
+/* Intensidade do efeito por elemento: s = escala, lift = subida (px), rot = giro (graus) */
+const FX = {
+  sunset:{s:.07,lift:0,rot:0,glow:24,rgb:'255,200,110'}, seagulls:{s:.18,lift:6,rot:0},
+  dolphin:{s:.14,lift:8,rot:-4}, waves:{s:0,lift:5,rot:0}, palms:{s:.035,lift:0,rot:0},
+  pearl:{s:.2,lift:3,rot:0,glow:18}, starfish:{s:.2,lift:0,rot:14}, bottle:{s:.16,lift:0,rot:-8}
+};
+
+/* ---------- Toast ---------- */
+const toast = $('toast');
+let toastT;
+function showFeedback(icon, msg) {
+  clearTimeout(toastT);
+  $('toastIcon').textContent = icon;
+  $('toastMsg').textContent = msg;
+  toast.classList.remove('opacity-0', 'translate-y-4');
+  toastT = setTimeout(() => toast.classList.add('opacity-0', 'translate-y-4'), 4200);
+}
+
+/* ---------- Proximidade do mouse ---------- */
+const scene = $('scene');
+const list = Object.keys(DATA).map(k => {
+  const el = $('hotspot-' + k);
+  return { k, el, hits: [...el.querySelectorAll('.hit')], vis: [...el.querySelectorAll('.visual')], fx: FX[k],
+           prox: 0, cur: 0, press: 0, pressed: false, focused: false, bump: 0, last: '', lastMsg: -1 };
+});
+let raf = 0, prev = 0, ptr = null;
+
+function kick() { if (!raf) { prev = performance.now(); raf = requestAnimationFrame(tick); } }
+
+function tick(now) {
+  const dt = Math.min(now - prev, 50); prev = now;
+  const k = reduced ? 1 : 1 - Math.exp(-dt / 80);            // suavização independente da taxa de quadros
+  const R = scene.getBoundingClientRect().width * 0.11;       // raio de influência do mouse
+  let busy = false;
+
+  for (const h of list) {
+    if (ptr) { // distância do ponteiro até a área de clique (que nunca se move)
+      let d = 1e9;
+      for (const el of h.hits) {
+        const r = el.getBoundingClientRect();
+        d = Math.min(d, Math.hypot(Math.max(r.left - ptr.x, 0, ptr.x - r.right), Math.max(r.top - ptr.y, 0, ptr.y - r.bottom)));
+      }
+      const t = clamp(1 - d / R, 0, 1);
+      h.prox = t * t * (3 - 2 * t);
+    }
+    const goal = Math.max(h.prox, h.focused ? 1 : 0), pg = h.pressed ? 1 : 0;
+    h.cur += (goal - h.cur) * k;
+    h.press += (pg - h.press) * Math.min(1, k * 2);
+    h.bump *= Math.exp(-dt / 140);
+    if (Math.abs(goal - h.cur) < .003) h.cur = goal;
+    if (Math.abs(pg - h.press) < .01) h.press = pg;
+    if (h.bump < .005) h.bump = 0;
+
+    const p = h.cur, f = h.fx;
+    const tf = `translateY(${-f.lift * p}px) rotate(${f.rot * p}deg) scale(${1 + f.s * p + .1 * h.bump - .06 * h.press})`;
+    const fl = p > .01 ? `brightness(${1 + .14 * p}) drop-shadow(0 0 ${(f.glow || 12) * p}px rgba(${f.rgb || '255,255,255'},${.85 * p}))` : 'none';
+    if (h.last !== tf + fl) { h.last = tf + fl; for (const v of h.vis) { v.style.transform = tf; v.style.filter = fl; } }
+    if (h.cur !== goal || h.bump || h.press !== pg) busy = true;
+  }
+  raf = busy ? requestAnimationFrame(tick) : 0;
+}
+
+const owner = e => list.find(h => h.el === e.target.closest?.('.hotspot'));
+scene.addEventListener('pointermove', e => { ptr = { x: e.clientX, y: e.clientY }; kick(); });
+scene.addEventListener('pointerdown', e => { ptr = { x: e.clientX, y: e.clientY }; const h = owner(e); if (h) h.pressed = true; kick(); });
+addEventListener('pointerup', () => { list.forEach(h => h.pressed = false); kick(); });
+['pointerleave', 'pointercancel'].forEach(t => scene.addEventListener(t, () => {
+  ptr = null; list.forEach(h => { h.prox = 0; h.pressed = false; }); kick();
+}));
+
+/* ---------- Ações ---------- */
+let attempts = 0, allShown = false;
+const clicked = new Set();
+
+function activate(h) {
+  $('tryCounter').textContent = ++attempts;
+  clicked.add(h.k);
+  const d = DATA[h.k];
+  let i; do { i = Math.floor(Math.random() * d.msgs.length); } while (i === h.lastMsg && d.msgs.length > 1);
+  h.lastMsg = i;
+  showFeedback(d.icon, d.msgs[i]);
+  if (!reduced) h.bump = 1;
+  kick(); playChime();
+  if (!allShown && clicked.size === list.length) {
+    allShown = true;
+    setTimeout(() => showFeedback('😉', 'Você já tocou em tudo! Só falta clicar em "Desistir"...'), 4400);
+  }
+}
+
+list.forEach(h => {
+  h.el.addEventListener('click', () => activate(h));
+  h.el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(h); } });
+  // Só ativa o destaque por foco quando é navegação por teclado (clique de mouse não prende o efeito)
+  h.el.addEventListener('focus', () => { h.focused = h.el.matches(':focus-visible'); kick(); });
+  h.el.addEventListener('blur', () => { h.focused = false; kick(); });
+});
+
+$('hintBtn').addEventListener('click', () => {
+  const hints = [
+    'Dica: não importa quão mágica pareça a praia, a resposta pode não ter sido desenhada...',
+    'Dica: o elemento mais lindo tem um sorriso incomparável e está bem em frente à tela neste momento!',
+    'Dica: olhe no reflexo da tela do seu dispositivo... 😉',
+    'Dica: se estiver difícil, não hesite em clicar no botão "Desistir"!'
+  ];
+  showFeedback('💡', hints[Math.floor(Math.random() * hints.length)]);
+  playChime();
+});
+
+/* ---------- Áudio ---------- */
+let audioCtx, gainNode, playing = false;
+function ctx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function initOcean() {
+  if (gainNode) return;
+  const c = ctx(), size = c.sampleRate * 3, buf = c.createBuffer(1, size, c.sampleRate), out = buf.getChannelData(0);
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+  for (let i = 0; i < size; i++) { // ruído rosa
+    const w = Math.random() * 2 - 1;
+    b0 = .99886 * b0 + w * .0555179; b1 = .99332 * b1 + w * .0750759; b2 = .969 * b2 + w * .153852;
+    b3 = .8665 * b3 + w * .3104856; b4 = .55 * b4 + w * .5329522; b5 = -.7616 * b5 - w * .016898;
+    out[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * .5362) * .08; b6 = w * .115926;
+  }
+  const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
+  const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 320;
+  const lfo = c.createOscillator(), lfoG = c.createGain(); lfo.frequency.value = .18; lfoG.gain.value = 180;
+  lfo.connect(lfoG); lfoG.connect(lp.frequency);
+  gainNode = c.createGain(); gainNode.gain.value = 0;
+  src.connect(lp); lp.connect(gainNode); gainNode.connect(c.destination);
+  src.start(); lfo.start();
+}
+function ramp(v, t) { // parte sempre do valor atual (sem "pulos" ao ligar/desligar rápido)
+  const n = audioCtx.currentTime;
+  gainNode.gain.cancelScheduledValues(n);
+  gainNode.gain.setValueAtTime(gainNode.gain.value, n);
+  gainNode.gain.linearRampToValueAtTime(v, n + t);
+}
+function toggleAudio() {
+  initOcean(); ctx();
+  playing = !playing;
+  ramp(playing ? .4 : .001, playing ? 1.5 : 1.2);
+  $('audioIcon').textContent = playing ? '🔊' : '🔈';
+  $('audioText').textContent = playing ? 'Som do Mar Ativo' : 'Ouvir as Ondas';
+  $('audioBtn').setAttribute('aria-pressed', playing);
+}
+function playChime() {
+  const c = ctx(), o = c.createOscillator(), g = c.createGain(), f = [523.25, 659.25, 783.99, 1046.5];
+  o.type = 'sine'; o.frequency.value = f[Math.floor(Math.random() * f.length)];
+  g.gain.setValueAtTime(.08, c.currentTime); g.gain.exponentialRampToValueAtTime(.0001, c.currentTime + 1.2);
+  o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 1.2);
+}
+$('audioBtn').addEventListener('click', toggleAudio);
+
+/* ---------- Modal ---------- */
+const modal = $('modal'), box = $('modalBox');
+let confettiT;
+function hearts() {
+  if (typeof confetti === 'undefined' || reduced) return;
+  clearInterval(confettiT);
+  const heart = confetti.shapeFromText ? confetti.shapeFromText({ text: '❤️', scalar: 2 }) : 'circle';
+  const base = { particleCount: 4, spread: 55, shapes: [heart], scalar: 2, colors: ['#ff8b94', '#ffaaa5', '#ff5e62', '#fff'] };
+  const end = Date.now() + 3500;
+  confettiT = setInterval(() => {
+    if (Date.now() > end) return clearInterval(confettiT);
+    confetti({ ...base, angle: 60, origin: { x: 0 } });
+    confetti({ ...base, angle: 120, origin: { x: 1 } });
+  }, 120);
+}
+function openModal() {
+  playChime(); if (!playing) toggleAudio();
+  modal.classList.remove('opacity-0', 'pointer-events-none'); box.classList.replace('scale-90', 'scale-100');
+  modal.setAttribute('aria-hidden', 'false'); $('closeBtn').focus(); hearts();
+}
+function closeModal() {
+  modal.classList.add('opacity-0', 'pointer-events-none'); box.classList.replace('scale-100', 'scale-90');
+  modal.setAttribute('aria-hidden', 'true'); $('giveUpBtn').focus({ preventScroll: true });
+}
+$('giveUpBtn').addEventListener('click', openModal);
+$('closeBtn').addEventListener('click', closeModal);
+$('againBtn').addEventListener('click', closeModal);
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') closeModal(); });
+
+</script>
+</body>
+</html>
